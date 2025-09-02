@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Beton Datenerfassung</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            padding: 10px;
+            background: #f0f0f0;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 15px;
+        }
+        
+        h1 {
+            font-size: 20px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .input-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .input-group {
+            border: 1px solid #ccc;
+            padding: 10px;
+            background: #fafafa;
+        }
+        
+        .input-label {
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 14px;
+            text-align: center;
+        }
+        
+        .wheel-picker {
+            position: relative;
+            height: 150px;
+            overflow: hidden;
+            background: white;
+            border: 1px solid #ddd;
+        }
+        
+        .wheel-selector {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 40px;
+            margin-top: -20px;
+            border-top: 2px solid #333;
+            border-bottom: 2px solid #333;
+            pointer-events: none;
+        }
+        
+        .wheel-content {
+            position: absolute;
+            width: 100%;
+            transition: transform 0.3s;
+            padding: 55px 0;
+        }
+        
+        .wheel-item {
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: #999;
+        }
+        
+        .wheel-item.selected {
+            color: #000;
+            font-weight: bold;
+            font-size: 20px;
+        }
+        
+        .current-value {
+            text-align: center;
+            margin-top: 5px;
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .density-box {
+            background: #e3f2fd;
+            padding: 10px;
+            margin-bottom: 15px;
+            text-align: center;
+            border: 1px solid #90caf9;
+        }
+        
+        .density-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #1976d2;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            background: #4caf50;
+            color: white;
+            cursor: pointer;
+        }
+        
+        .btn:active {
+            background: #45a049;
+        }
+        
+        .btn-export {
+            background: #2196f3;
+            margin-top: 10px;
+        }
+        
+        .btn-export:active {
+            background: #1976d2;
+        }
+        
+        .btn-delete {
+            background: #f44336;
+            padding: 5px 10px;
+            font-size: 12px;
+        }
+        
+        .btn-config {
+            background: #757575;
+            margin-top: 5px;
+        }
+        
+        .status {
+            padding: 8px;
+            margin: 10px 0;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .status.success {
+            background: #c8e6c9;
+            color: #2e7d32;
+        }
+        
+        .status.error {
+            background: #ffcdd2;
+            color: #c62828;
+        }
+        
+        .results-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin: 15px 0;
+            background: #fafafa;
+        }
+        
+        .result-item {
+            padding: 8px;
+            margin-bottom: 8px;
+            background: white;
+            border: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .result-info {
+            font-size: 14px;
+        }
+        
+        .config-section {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f5f5f5;
+            border: 1px dashed #999;
+        }
+        
+        .config-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .config-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            font-size: 14px;
+        }
+        
+        @media (max-width: 480px) {
+            .input-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Beton Datenerfassung</h1>
+        
+        <!-- Batch und Brett Auswahl -->
+        <div class="input-row">
+            <div class="input-group">
+                <div class="input-label">Batch</div>
+                <div class="wheel-picker" data-type="batch">
+                    <div class="wheel-selector"></div>
+                    <div class="wheel-content" id="batchWheel"></div>
+                </div>
+                <div class="current-value">Batch: <span id="batchValue">1</span></div>
+            </div>
+            
+            <div class="input-group">
+                <div class="input-label">Brett</div>
+                <div class="wheel-picker" data-type="board">
+                    <div class="wheel-selector"></div>
+                    <div class="wheel-content" id="boardWheel"></div>
+                </div>
+                <div class="current-value">Brett: <span id="boardValue">1</span></div>
+            </div>
+        </div>
+        
+        <!-- Gewicht und Höhe -->
+        <div class="input-row">
+            <div class="input-group">
+                <div class="input-label">Gewicht (kg)</div>
+                <div class="wheel-picker" data-type="weight">
+                    <div class="wheel-selector"></div>
+                    <div class="wheel-content" id="weightWheel"></div>
+                </div>
+                <div class="current-value"><span id="weightValue">20</span> kg</div>
+            </div>
+            
+            <div class="input-group">
+                <div class="input-label">Höhe (mm)</div>
+                <div class="wheel-picker" data-type="height">
+                    <div class="wheel-selector"></div>
+                    <div class="wheel-content" id="heightWheel"></div>
+                </div>
+                <div class="current-value"><span id="heightValue">100</span> mm</div>
+            </div>
+        </div>
+        
+        <!-- Dichte Anzeige -->
+        <div class="density-box" id="densityBox">
+            <div>Dichte:</div>
+            <div class="density-value"><span id="densityValue">-</span> kg/m³</div>
+        </div>
+        
+        <button onclick="addEntry()" class="btn">Eintrag hinzufügen</button>
+        
+        <div id="status" class="status" style="display: none;"></div>
+        
+        <!-- Ergebnisliste -->
+        <div class="results-list" id="resultsList">
+            <div style="text-align: center; color: #999;">Keine Einträge</div>
+        </div>
+        
+        <button onclick="exportCSV()" class="btn btn-export">CSV exportieren</button>
+        
+        <!-- Konfiguration -->
+        <div class="config-section">
+            <div class="config-title">Konfiguration</div>
+            
+            <div style="margin-bottom: 10px;">
+                <label>Abmessungen (cm):</label>
+                <div class="config-row">
+                    <input type="number" id="stoneWidth" value="11.5" step="0.1" placeholder="Breite">
+                    <input type="number" id="stoneLength" value="37.3" step="0.1" placeholder="Länge">
+                </div>
+            </div>
+            
+            <div style="margin-bottom: 10px;">
+                <label>Standard-Werte:</label>
+                <div class="config-row">
+                    <input type="number" id="defaultWeight" value="20" placeholder="Gewicht">
+                    <input type="number" id="defaultHeight" value="100" placeholder="Höhe">
+                </div>
+            </div>
+            
+            <div style="margin-bottom: 10px;">
+                <label>Anzahl:</label>
+                <div class="config-row">
+                    <input type="number" id="batchCount" value="10" placeholder="Batches">
+                    <input type="number" id="boardCount" value="12" placeholder="Bretter">
+                </div>
+            </div>
+            
+            <div style="margin-bottom: 10px;">
+                <label>Max-Werte:</label>
+                <div class="config-row">
+                    <input type="number" id="maxWeight" value="50" placeholder="Max Gewicht">
+                    <input type="number" id="maxHeight" value="300" placeholder="Max Höhe">
+                </div>
+            </div>
+            
+            <button onclick="applyConfig()" class="btn btn-config">Konfiguration anwenden</button>
+            <button onclick="clearData()" class="btn btn-delete" style="width: 100%; margin-top: 5px;">Alle Daten löschen</button>
+        </div>
+    </div>
+
+    <script>
+        // Globale Variablen
+        let entries = [];
+        let currentValues = {
+            batch: 1,
+            board: 1,
+            weight: 20,
+            height: 100
+        };
+        
+        let config = {
+            batchCount: 10,
+            boardCount: 12,
+            stoneWidth: 11.5,
+            stoneLength: 37.3,
+            defaultWeight: 20,
+            defaultHeight: 100,
+            maxWeight: 50,
+            maxHeight: 300
+        };
+        
+        // Touch Handling
+        let touchData = {};
+        
+        // Initialisierung
+        document.addEventListener('DOMContentLoaded', function() {
+            loadConfig();
+            loadData();
+            initWheels();
+            updateDensity();
+        });
+        
+        function initWheels() {
+            // Batch Wheel
+            createWheel('batch', 1, config.batchCount, currentValues.batch);
+            
+            // Board Wheel
+            createWheel('board', 1, config.boardCount, currentValues.board);
+            
+            // Weight Wheel
+            createWheel('weight', 1, config.maxWeight, currentValues.weight);
+            
+            // Height Wheel
+            createWheel('height', 1, config.maxHeight, currentValues.height);
+            
+            // Event Listeners
+            document.querySelectorAll('.wheel-picker').forEach(picker => {
+                const type = picker.dataset.type;
+                
+                // Touch Events
+                picker.addEventListener('touchstart', e => handleTouchStart(e, type), {passive: false});
+                picker.addEventListener('touchmove', e => handleTouchMove(e, type), {passive: false});
+                picker.addEventListener('touchend', e => handleTouchEnd(e, type), {passive: false});
+                
+                // Mouse Events
+                picker.addEventListener('mousedown', e => handleMouseDown(e, type));
+                picker.addEventListener('mousemove', e => handleMouseMove(e, type));
+                picker.addEventListener('mouseup', e => handleMouseUp(e, type));
+                picker.addEventListener('mouseleave', e => handleMouseUp(e, type));
+            });
+        }
+        
+        function createWheel(type, min, max, defaultValue) {
+            const wheel = document.getElementById(type + 'Wheel');
+            wheel.innerHTML = '';
+            
+            for (let i = min; i <= max; i++) {
+                const item = document.createElement('div');
+                item.className = 'wheel-item';
+                item.textContent = i;
+                item.dataset.value = i;
+                wheel.appendChild(item);
+            }
+            
+            setValue(type, defaultValue);
+        }
+        
+        function setValue(type, value) {
+            const wheel = document.getElementById(type + 'Wheel');
+            const index = value - 1;
+            const transform = -index * 40;
+            
+            wheel.style.transform = `translateY(${transform}px)`;
+            currentValues[type] = value;
+            
+            document.getElementById(type + 'Value').textContent = value;
+            
+            // Update visual
+            wheel.querySelectorAll('.wheel-item').forEach((item, i) => {
+                item.classList.toggle('selected', i === index);
+            });
+            
+            updateDensity();
+        }
+        
+        // Touch/Mouse Handlers
+        function handleTouchStart(e, type) {
+            e.preventDefault();
+            touchData[type] = {
+                startY: e.touches[0].clientY,
+                startTransform: getTransform(type),
+                isDragging: true
+            };
+        }
+        
+        function handleTouchMove(e, type) {
+            if (!touchData[type]?.isDragging) return;
+            e.preventDefault();
+            
+            const deltaY = e.touches[0].clientY - touchData[type].startY;
+            updateWheel(type, touchData[type].startTransform + deltaY);
+        }
+        
+        function handleTouchEnd(e, type) {
+            if (!touchData[type]?.isDragging) return;
+            e.preventDefault();
+            snapWheel(type);
+            touchData[type].isDragging = false;
+        }
+        
+        function handleMouseDown(e, type) {
+            e.preventDefault();
+            touchData[type] = {
+                startY: e.clientY,
+                startTransform: getTransform(type),
+                isDragging: true
+            };
+        }
+        
+        function handleMouseMove(e, type) {
+            if (!touchData[type]?.isDragging) return;
+            e.preventDefault();
+            
+            const deltaY = e.clientY - touchData[type].startY;
+            updateWheel(type, touchData[type].startTransform + deltaY);
+        }
+        
+        function handleMouseUp(e, type) {
+            if (!touchData[type]?.isDragging) return;
+            snapWheel(type);
+            touchData[type].isDragging = false;
+        }
+        
+        function getTransform(type) {
+            const wheel = document.getElementById(type + 'Wheel');
+            const transform = wheel.style.transform || 'translateY(0px)';
+            return parseFloat(transform.match(/translateY\((-?\d+\.?\d*)px\)/)?.[1] || 0);
+        }
+        
+        function updateWheel(type, transform) {
+            const wheel = document.getElementById(type + 'Wheel');
+            const max = getMaxForType(type);
+            const minTransform = -(max - 1) * 40;
+            const maxTransform = 0;
+            
+            const clamped = Math.max(minTransform, Math.min(maxTransform, transform));
+            wheel.style.transition = 'none';
+            wheel.style.transform = `translateY(${clamped}px)`;
+            
+            // Update value
+            const value = Math.round(-clamped / 40) + 1;
+            currentValues[type] = value;
+            document.getElementById(type + 'Value').textContent = value;
+            
+            // Update visual
+            const index = value - 1;
+            wheel.querySelectorAll('.wheel-item').forEach((item, i) => {
+                item.classList.toggle('selected', i === index);
+            });
+            
+            updateDensity();
+        }
+        
+        function snapWheel(type) {
+            const wheel = document.getElementById(type + 'Wheel');
+            const current = getTransform(type);
+            const snapped = Math.round(current / 40) * 40;
+            
+            wheel.style.transition = 'transform 0.3s';
+            updateWheel(type, snapped);
+        }
+        
+        function getMaxForType(type) {
+            switch(type) {
+                case 'batch': return config.batchCount;
+                case 'board': return config.boardCount;
+                case 'weight': return config.maxWeight;
+                case 'height': return config.maxHeight;
+                default: return 10;
+            }
+        }
+        
+        // Dichte berechnen
+        function updateDensity() {
+            if (currentValues.weight > 0 && currentValues.height > 0) {
+                const volumeM3 = (config.stoneWidth / 100) * (config.stoneLength / 100) * (currentValues.height / 1000);
+                const density = currentValues.weight / volumeM3;
+                document.getElementById('densityValue').textContent = Math.round(density);
+            } else {
+                document.getElementById('densityValue').textContent = '-';
+            }
+        }
+        
+        // Daten Management
+        function addEntry() {
+            if (currentValues.weight === 0 || currentValues.height === 0) {
+                showStatus('Bitte Gewicht und Höhe eingeben', 'error');
+                return;
+            }
+            
+            const volumeM3 = (config.stoneWidth / 100) * (config.stoneLength / 100) * (currentValues.height / 1000);
+            const density = Math.round(currentValues.weight / volumeM3);
+            
+            const entry = {
+                id: Date.now(),
+                batch: currentValues.batch,
+                board: currentValues.board,
+                weight: currentValues.weight,
+                height: currentValues.height,
+                density: density,
+                timestamp: new Date().toLocaleString('de-DE')
+            };
+            
+            entries.push(entry);
+            updateList();
+            saveData();
+            
+            // Reset auf Defaults
+            setValue('weight', config.defaultWeight);
+            setValue('height', config.defaultHeight);
+            
+            showStatus('Eintrag hinzugefügt', 'success');
+        }
+        
+        function deleteEntry(id) {
+            entries = entries.filter(e => e.id !== id);
+            updateList();
+            saveData();
+        }
+        
+        function updateList() {
+            const list = document.getElementById('resultsList');
+            
+            if (entries.length === 0) {
+                list.innerHTML = '<div style="text-align: center; color: #999;">Keine Einträge</div>';
+                return;
+            }
+            
+            list.innerHTML = entries.map(e => `
+                <div class="result-item">
+                    <div class="result-info">
+                        B${e.batch}/Br${e.board}: ${e.weight}kg, ${e.height}mm, ${e.density}kg/m³
+                    </div>
+                    <button class="btn btn-delete" onclick="deleteEntry(${e.id})">X</button>
+                </div>
+            `).reverse().join('');
+        }
+        
+        function exportCSV() {
+            if (entries.length === 0) {
+                showStatus('Keine Daten vorhanden', 'error');
+                return;
+            }
+            
+            const csv = [
+                'Batch;Brett;Gewicht (kg);Höhe (mm);Dichte (kg/m³);Zeitstempel',
+                ...entries.map(e => `${e.batch};${e.board};${e.weight};${e.height};${e.density};"${e.timestamp}"`)
+            ].join('\n');
+            
+            const blob = new Blob(['\ufeff' + csv], {type: 'text/csv;charset=utf-8;'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `beton_${new Date().toISOString().slice(0,10)}.csv`;
+            a.click();
+            
+            showStatus('CSV exportiert', 'success');
+        }
+        
+        // Konfiguration
+        function applyConfig() {
+            config.batchCount = parseInt(document.getElementById('batchCount').value);
+            config.boardCount = parseInt(document.getElementById('boardCount').value);
+            config.stoneWidth = parseFloat(document.getElementById('stoneWidth').value);
+            config.stoneLength = parseFloat(document.getElementById('stoneLength').value);
+            config.defaultWeight = parseInt(document.getElementById('defaultWeight').value);
+            config.defaultHeight = parseInt(document.getElementById('defaultHeight').value);
+            config.maxWeight = parseInt(document.getElementById('maxWeight').value);
+            config.maxHeight = parseInt(document.getElementById('maxHeight').value);
+            
+            saveConfig();
+            initWheels();
+            updateDensity();
+            showStatus('Konfiguration gespeichert', 'success');
+        }
+        
+        function clearData() {
+            if (confirm('Alle Daten löschen?')) {
+                entries = [];
+                updateList();
+                localStorage.removeItem('betonData');
+                showStatus('Daten gelöscht', 'success');
+            }
+        }
+        
+        // Storage
+        function saveData() {
+            localStorage.setItem('betonData', JSON.stringify({
+                entries: entries,
+                values: currentValues,
+                timestamp: new Date().toISOString()
+            }));
+        }
+        
+        function loadData() {
+            const saved = localStorage.getItem('betonData');
+            if (saved) {
+                const data = JSON.parse(saved);
+                const age = (new Date() - new Date(data.timestamp)) / 3600000;
+                
+                if (age < 24 && data.entries?.length > 0) {
+                    if (confirm(`${data.entries.length} gespeicherte Einträge gefunden. Wiederherstellen?`)) {
+                        entries = data.entries;
+                        currentValues = {...currentValues, ...data.values};
+                        updateList();
+                    }
+                }
+            }
+        }
+        
+        function saveConfig() {
+            localStorage.setItem('betonConfig', JSON.stringify(config));
+        }
+        
+        function loadConfig() {
+            const saved = localStorage.getItem('betonConfig');
+            if (saved) {
+                config = {...config, ...JSON.parse(saved)};
+                
+                // Update inputs
+                document.getElementById('batchCount').value = config.batchCount;
+                document.getElementById('boardCount').value = config.boardCount;
+                document.getElementById('stoneWidth').value = config.stoneWidth;
+                document.getElementById('stoneLength').value = config.stoneLength;
+                document.getElementById('defaultWeight').value = config.defaultWeight;
+                document.getElementById('defaultHeight').value = config.defaultHeight;
+                document.getElementById('maxWeight').value = config.maxWeight;
+                document.getElementById('maxHeight').value = config.maxHeight;
+            }
+        }
+        
+        function showStatus(msg, type) {
+            const status = document.getElementById('status');
+            status.textContent = msg;
+            status.className = 'status ' + type;
+            status.style.display = 'block';
+            setTimeout(() => status.style.display = 'none', 2000);
+        }
+        
+        // Auto-save on page unload
+        window.addEventListener('beforeunload', () => {
+            if (entries.length > 0) saveData();
+        });
+    </script>
+</body>
+</html>
